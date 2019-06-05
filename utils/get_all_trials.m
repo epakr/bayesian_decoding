@@ -1,4 +1,4 @@
-function [trials] = get_all_trials(data_root)
+function [trials] = get_all_trials(data_root, region)
 % Return struct array of all trials stored in data root directory
 %
 % A 'trial' here is a set of simulateous recordings, specified by an animal
@@ -6,6 +6,7 @@ function [trials] = get_all_trials(data_root)
 %
 % Args:
 %     data_root (string): Absolute path to directory containing experiment data
+%     region (string): Either 'CA1', 'MEC', or 'SUB'
 %
 % Returns:
 %     trials (struct array): Each struct contains the following fields:
@@ -39,7 +40,15 @@ for animal_idx = 1:length(animal_ls)
         if isempty(cell_ls)
             error(sprintf('Subdirectory has no data: %s/%s', data_root));
         end
-        matches = regexp(cell_ls(1).name, 'R[0-9][0-9]', 'match');
+
+        % Subiculum R-IDs have two digits, other regions have three
+        if strcmp(region, 'SUB')
+            r_regexp = 'R[0-9][0-9]';
+        else
+            r_regexp = 'R[0-9][0-9][0-9]';
+        end
+
+        matches = regexp(cell_ls(1).name, r_regexp, 'match');
         room_id = matches{1}(2:end);
 
         % Add trial to list (trial subdir is animal directory)
@@ -65,8 +74,25 @@ for animal_idx = 1:length(animal_ls)
 
     end 
     
-% Trials we decided to ignore
-ignore(1).a_id = '1027'; ignore(1).r_id = '54';
+% Trials we decided to ignore for subiculum
+sub_ignore(1).a_id = '1027'; sub_ignore(1).r_id = '54';
+
+% Trials we decided to ignore for CA1
+mec_ignore(1).a_id = '0000'; mec_ignore(1).r_id = '00';
+
+% Trials we decided to ignore for MED
+mec_ignore(1).a_id = '0000'; mec_ignore(1).r_id = '00';
+
+% Choose ignore list based on region parameter
+if strcmp(region, 'SUB')
+    ignore = sub_ignore;
+elseif strcmp(region, 'CA1')
+    ignore = ca1_ignore;
+elseif strcmp(region, 'MEC')
+    ignore = mec_ignore;
+else
+    error('region not supported');
+end
 
 % Remove trials to ignore from list
 ignore_idx = zeros(1, length(trials));

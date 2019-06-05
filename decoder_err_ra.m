@@ -9,7 +9,6 @@ rng(1979);
 
 % Config file specifies directories for input data and results
 config = get_config();
-data_root = config.data_root;
 out_dir = sprintf('%s/decode_err_ra', config.results_root);
 
 % Number of position bins per dimension (space is n_bins_dim x n_bins_dim grid)
@@ -20,6 +19,9 @@ min_spikes = 100;
 
 % Minimum number of cells required for session to be considered for analysis
 min_cells = 5;
+
+% Anatomical region data is from
+region = 'MEC'; % also could be 'CA1' or 'SUB'
 
 
 %% Decoder parameters
@@ -47,7 +49,18 @@ decode_opt.ignore_null_vecs = true;
 
 %% Compute decoder error for all trials
 
-trials = get_all_trials(data_root);
+% Data root
+if strcmp(region, 'SUB')
+    data_root = config.data_root_sub;
+elseif strcmp(region, 'CA1')
+    data_root = config.data_root_ca1;
+elseif strcmp(region, 'MEC')
+    data_root = config.data_root_mec;
+else
+    error('region not supported');
+end
+
+trials = get_all_trials(data_root, region);
 
 for t = 1:length(trials)
 
