@@ -1,4 +1,4 @@
-%%% Compute error of SA1-trained Bayesian decoder on RA data
+%%% Compute error of SA1-trained Bayesian decoder on SA1 data
 
 clear all, close all, clc
 
@@ -8,7 +8,7 @@ rng(1979);
 %% Global parameters
 
 % Change this to subdirectory we want to write out to!
-out_subdir = 'decode_err_ra';
+out_subdir = 'decode_err_sa1';
 
 % Config file specifies directories for input data and results
 config = get_config();
@@ -24,7 +24,7 @@ min_spikes = 100;
 min_cells = 5;
 
 % Anatomical region data is from
-region = 'SUB'; % could be 'MEC' or 'CA1' or 'SUB'
+region = 'CA1'; % could be 'MEC' or 'CA1' or 'SUB'
 
 
 %% Decoder parameters
@@ -71,43 +71,26 @@ for t = 1:length(trials)
 
     %% Load SA1 and RA data
 
-    % Load cell filenames for SA1 and RA cells
+    % Load cell filenames for cells
     cells_sa1 = get_cells(data_root, trial, 'SA1');
-    cells_ra = get_cells(data_root, trial, 'RA');
-    if isempty(cells_sa1) || isempty(cells_ra)
+    if isempty(cells_sa1)
         continue;
-    end
-    cells = [];
-    for k = 1:length(cells_sa1)
-        a_eq = strcmp(cells_sa1(k).a_id, cells_ra(k).a_id);
-        r_eq = strcmp(cells_sa1(k).r_id, cells_ra(k).r_id);
-        c_eq = strcmp(cells_sa1(k).c_id, cells_ra(k).c_id);
-        if a_eq & r_eq & c_eq
-            c = cells_sa1(k);
-            c.ra_rm_fname = cells_ra(k).ra_rm_fname;
-            c.ra_ar_fname = cells_ra(k).ra_ar_fname;
-            cells = [cells, c];
-        else
-            error('SA1 and RA sessions do not have same cells');
-        end
     end
     
     % Load SA1 position data (this should be the same for all cells)
-    [x_sa1, ~] = get_decoder_data_sa1(cells(1), data_root, n_bins_dim);
+    [x, ~] = get_decoder_data_sa1(cells_sa1(1), data_root, n_bins_dim);
     
     % Load spike data for trial, and decide whether to keep trial
     spikes_sa1 = {};
     spikes_ra = {};
     n_valid_cells = 0;
-    for c = cells
+    for c = cells_sa1
         [~, y_sa1] = get_decoder_data_sa1(c, data_root, n_bins_dim);
-        if (size(y_sa1, 1) ~= size(x_sa1, 1))
+        if (size(y_sa1, 1) ~= size(x, 1))
             error('x and y not same length!');
-        end        
-        [~, ~, y_ra] = get_decoder_data_ra(c, data_root, n_bins_dim);
-        if (sum(y_sa1) >= min_spikes) & (sum(y_ra) >= min_spikes)
+        end
+        if sum(y_sa1) >= min_spikes
             spikes_sa1{end + 1} = y_sa1;
-            spikes_ra{end + 1} = y_ra;
             n_valid_cells = n_valid_cells + 1;
         end
     end
@@ -119,35 +102,29 @@ for t = 1:length(trials)
     %% Compute firing rate maps using SA1 data
 
     % Train decoder on SA1 data
-    [sa1_params, dbg_train] = decoder_train(x_sa1, spikes_sa1, decode_opt);
+    [sa1_params, dbg_train] = decoder_train(x, spikes_sa1, decode_opt);
 
 
-    %% Predict RA position using RA spikes
+    %% Predict SA1 position using SA1 spikes
+
+    % Predict position for SA1 data
+    [x_pred, dbg_pred] = decoder_predict(sa1_params, spikes_sa1, decode_opt);
     
-    % Set decoder parameters (firing rates from SA1 with flat prior)
-    p_x_flat_nn = ones(decode_opt.n_bins_dim);
-    p_x_flat = p_x_flat_nn / sum(p_x_flat_nn);
-    dec_params.p_x = p_x_flat;
-    dec_params.frms = sa1_params.frms;
-
-    % Predict position for RA data
-    [x_pred, dbg_pred] = decoder_predict(dec_params, spikes_ra, decode_opt);
+    % For control, predict using only prior positional information
+    [x_pred_ctr, dbg_pred_ctr] = prior_predict(sa1_params, spikes_sa1, decode_opt);
 
 
-    %% Compute error in both coordinate frames
+    %% Compute error
 
-    % Get position data (this should be the same for all cells)
-    [x_ra_rm, x_ra_ar, ~] = get_decoder_data_ra(cells(1), data_root, n_bins_dim);
-
-    % Compute 'room' and 'arena' error signals
-    err_rm = sqrt(sum((x_pred - x_ra_rm) .^ 2, 2));
-    err_ar = sqrt(sum((x_pred - x_ra_ar) .^ 2, 2));
+    % Compute error signal
+    err = sqrt(sum((x_pred - x) .^ 2, 2));
+    err_ctr = sqrt(sum((x_pred_ctr - x) .^ 2, 2));
 
     % Print results
     fprintf('trial: A%s-R%s\n', trial.a_id, trial.r_id);
-    fprintf('num cells: %d\n', length(cells));
-    fprintf('\tmean error (rm): %.4f\n', mean(err_rm, 'omitnan'));
-    fprintf('\tmean error (ar): %.4f\n', mean(err_ar, 'omitnan'));
+    fprintf('num cells: %d\n', length(cells_sa1));
+    fprintf('\tmean error: %.2f\n', mean(err, 'omitnan'));
+    fprintf('\tmean error (control): %.2f\n', mean(err_ctr, 'omitnan'));
 
     % Save results
     results_fpath = sprintf('%s/A%s_R%s.mat', out_dir, trial.a_id, trial.r_id);

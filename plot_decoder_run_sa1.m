@@ -1,4 +1,4 @@
-%%% Plot results from single decoder run on RA data
+%%% Plot results from single decoder run on SA1 data
 
 clear all, close all, clc
 
@@ -7,7 +7,7 @@ clear all, close all, clc
 config = get_config();
 
 % Set this to results you want to plot
-results_path = sprintf('%s/decode_err_ra/A0405_R22.mat', config.results_root);
+results_path = sprintf('%s/decode_err_sa1/A0405_R22.mat', config.results_root);
 
 results = load(results_path);
 
@@ -39,14 +39,8 @@ ts_end = 3200;
 
 figure();
 
-subplot(211);
-plot_trajectory(results.x_ra_rm, results.x_pred, ts_start, ts_end);
+plot_trajectory(results.x, results.x_pred, ts_start, ts_end);
 title(sprintf('x vs x_{pred}(room) (t:%d-%d)', ts_start, ts_end));
-
-subplot(212);
-plot_trajectory(results.x_ra_ar, results.x_pred, ts_start, ts_end);
-title(sprintf('x vs x_{pred}(arena) (t:%d-%d)', ts_start, ts_end));
-
 
 %% Helper functions
 

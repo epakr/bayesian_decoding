@@ -17,7 +17,18 @@ function [trials] = get_all_trials(data_root, region)
 
 trials = [];
 
-animal_ls = dir(sprintf('%s/S*', data_root));
+ls_str = '';
+if strcmp(region, 'CA1')
+    ls_str = '%s/H*';
+elseif strcmp(region, 'MEC')
+    ls_str = '%s/A*';
+elseif strcmp(region, 'SUB')
+    ls_str = '%s/S*';
+else
+    error('Region not recognized');
+end
+
+animal_ls = dir(sprintf(ls_str, data_root));
 if isempty(animal_ls)
     error(sprintf('Data root directory has no data: %s', data_root));
 end
@@ -78,10 +89,11 @@ for animal_idx = 1:length(animal_ls)
 sub_ignore(1).a_id = '1027'; sub_ignore(1).r_id = '54';
 
 % Trials we decided to ignore for CA1
-mec_ignore(1).a_id = '0000'; mec_ignore(1).r_id = '00';
+ca1_ignore(1).a_id = '0000'; ca1_ignore(1).r_id = '00';
 
 % Trials we decided to ignore for MED
 mec_ignore(1).a_id = '0000'; mec_ignore(1).r_id = '00';
+%mec_ignore(2).a_id = '0410'; mec_ignore(2).r_id = '848';
 
 % Choose ignore list based on region parameter
 if strcmp(region, 'SUB')

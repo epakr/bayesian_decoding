@@ -101,6 +101,7 @@ end
 
 % Iterate through all room data filenames
 dir_ls = dir(sprintf('%s/%s/*%sR*-cl.P*Rm.txt', data_root, trial.subdir, s_id));
+
 for k = 1:length(dir_ls)
 
     % Room data filename
@@ -109,7 +110,7 @@ for k = 1:length(dir_ls)
     % Arena data filename and path (if file exists)
     ar_fname = replace(rm_fname, 'Rm', 'Ar');
     ar_fpath = sprintf('%s/%s/%s', data_root, trial.subdir, ar_fname);
-
+    
     % If arena data exists, add cell to array
     if isfile(ar_fpath)
 
